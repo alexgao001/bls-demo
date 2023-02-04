@@ -2,7 +2,9 @@ package main
 
 import (
 	"encoding/hex"
+
 	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/crypto/bls/common"
 )
 
 type Vote struct {
@@ -27,6 +29,21 @@ func (vote *Vote) Verify(eventHash []byte) {
 		return
 	}
 	println("successfully verified")
+}
+
+func AggregatedSignatureV1(votes []*Vote) (common.Signature, error) {
+	// Prepare aggregated vote signature
+	voteAddrSet := make(map[string]struct{}, len(votes))
+	signatures := make([][]byte, 0, len(votes))
+	for _, v := range votes {
+		voteAddrSet[hex.EncodeToString(v.PubKey[:])] = struct{}{}
+		signatures = append(signatures, v.Signature[:])
+	}
+	sigs, err := bls.MultipleSignaturesFromBytes(signatures)
+	if err != nil {
+		return nil, err
+	}
+	return bls.AggregateSignatures(sigs), nil
 }
 
 func AggregatedSignature(votes []*Vote) ([]byte, error) {
